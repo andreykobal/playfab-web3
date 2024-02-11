@@ -43,6 +43,8 @@ public class LoginWindowView : MonoBehaviour
     // Reference to our Authentication service
     private PlayFabAuthService _AuthService = PlayFabAuthService.Instance;
 
+    public AuthenticateSessionTicket authenticateSessionTicket;
+
     public void Awake()
     {
         if (ClearPlayerPrefs)
@@ -100,6 +102,8 @@ public class LoginWindowView : MonoBehaviour
     {
         Debug.LogFormat("Logged In as: {0}", result.PlayFabId);
         Debug.LogFormat("Session Ticket: {0}", result.SessionTicket);
+        authenticateSessionTicket.Authenticate(result.SessionTicket);
+
         StatusText.text = "";
         LoginPanel.SetActive(false);
         LoggedinPanel.SetActive(true);

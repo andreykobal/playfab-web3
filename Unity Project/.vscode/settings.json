@@ -51,5 +51,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "azure-playfab-web3.sln"
+    "dotnet.defaultSolution": "Unity Project.sln"
 }
