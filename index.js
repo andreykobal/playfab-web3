@@ -1,24 +1,39 @@
-const { PlayFabServer } = require("playfab-sdk");
-var PlayFab = require("./node_modules/playfab-sdk/Scripts/PlayFab/PlayFab");
-var PlayFabClient = require("./node_modules/playfab-sdk/Scripts/PlayFab/PlayFabClient");
+const express = require('express');
+const bodyParser = require('body-parser');
+const { PlayFabServer } = require('playfab-sdk');
 
-PlayFab.settings.titleId = "D1159";
-PlayFab.settings.developerSecretKey = "R3SP6WWQKDOG6POAKENUAGQTSJSFRKN7QBJXH88SUTMJ76OZIF";
+// Initialize PlayFab configuration
+PlayFabServer.settings.titleId = "D1159";
+PlayFabServer.settings.developerSecretKey = "R3SP6WWQKDOG6POAKENUAGQTSJSFRKN7QBJXH88SUTMJ76OZIF";
 
-var sessionTicket = "2953E29722F89E4B-3DA2D9EAD39C3961-30A4F2A6B81E94C9-D1159-8DC2B54C0A7B60C-TQ5180dvNI2wIDZFn42HYB+A0R9NoKOiEqoCUX6F1Mw=";
+const app = express();
+const port = 3000;
 
-function authenticateSessionTicket(sessionTicket) {
-    var request = {
-        //secret key and session ticket
+// Middleware to parse JSON bodies
+app.use(bodyParser.json());
+
+app.post('/authenticate', (req, res) => {
+    const sessionTicket = req.body.sessionTicket;
+
+    if (!sessionTicket) {
+        return res.status(400).send({ message: 'Session ticket is required' });
+    }
+
+    const request = {
         SessionTicket: sessionTicket,
-        };
-    PlayFabServer.AuthenticateSessionTicket(request, function (error, result) {
+    };
+
+    PlayFabServer.AuthenticateSessionTicket(request, (error, result) => {
         if (error) {
-            console.log("Got an error: ", error);
+            console.error("Got an error: ", error);
+            res.status(500).send({ message: "Authentication failed", error });
         } else {
-            console.log("Got a result: ", result);
+            console.log("\x1b[36m%s\x1b[0m", "Got a result: ", result); // Cyan
+            res.send({ message: "Authentication successful" }); // Only tells the user that authentication was successful
         }
     });
-}
+});
 
-authenticateSessionTicket(sessionTicket);
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
