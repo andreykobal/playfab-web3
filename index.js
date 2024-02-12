@@ -1,13 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { PlayFabServer } = require('playfab-sdk');
+const { PlayFab, PlayFabAdmin, PlayFabServer } = require('playfab-sdk');
 const { Web3 } = require('web3');
 const fs = require('fs');
 const path = require('path');
 
 // Initialize PlayFab configuration
-PlayFabServer.settings.titleId = "D1159";
-PlayFabServer.settings.developerSecretKey = "R3SP6WWQKDOG6POAKENUAGQTSJSFRKN7QBJXH88SUTMJ76OZIF";
+PlayFab.settings.titleId = "D1159";
+PlayFab.settings.developerSecretKey = "R3SP6WWQKDOG6POAKENUAGQTSJSFRKN7QBJXH88SUTMJ76OZIF";
 
 const app = express();
 const port = 3000;
@@ -17,6 +17,47 @@ app.use(bodyParser.json());
 
 // Initialize web3 with a provider (this can be an Infura URL, or any other Ethereum node URL)
 const web3 = new Web3('https://ethereum-goerli.publicnode.com'); // Adjust the provider URL accordingly
+
+
+
+function updateUserWalletAddress(id ,walletAddress) {
+    const updateDataRequest = {
+        PlayFabId: id,
+        Data: {
+            WalletAddress: walletAddress
+        },
+        IfChangedFromDataVersion: 0,
+        Permission: "Private"
+    };
+
+    PlayFabAdmin.UpdateUserReadOnlyData(updateDataRequest, (error, result) => {
+        if (error) {
+            console.error("Got an error: ", error);
+        } else {
+            console.log("Updated user wallet address: ", result);
+        }
+    });
+}
+
+function getUserWalletAddress(id) {
+    const getDataRequest = {
+        PlayFabId: id,
+        Keys: ["WalletAddress"]
+    };
+
+    PlayFabAdmin.GetUserReadOnlyData(getDataRequest, (error, result) => {
+        if (error) {
+            console.error("Got an error: ", error);
+        } else {
+            console.log("Got User Wallet Address from Playfab: ", result);
+            // Accessing the WalletAddress object
+            const walletAddress = result.data.Data.WalletAddress ? result.data.Data.WalletAddress.Value : 'No Wallet Address Found';
+            console.log(`Wallet Address for user ${id}: ${walletAddress}`);
+        }
+    });
+}
+
+
 
 app.post('/authenticate', (req, res) => {
     const sessionTicket = req.body.sessionTicket;
@@ -54,13 +95,18 @@ app.post('/authenticate', (req, res) => {
                 fs.writeFileSync(walletFilePath, JSON.stringify(walletData, null, 2));
 
                 console.log(`Wallet created for user ${userId}`);
+
+                // Update the user's wallet address in PlayFab
+                updateUserWalletAddress(userId, walletData.address);
             } else {
                 console.log(`Wallet already exists for user ${userId}`);
+                getUserWalletAddress(userId);
             }
 
             res.send({ message: "Authentication successful" });
         }
     });
+
 });
 
 app.listen(port, () => {
