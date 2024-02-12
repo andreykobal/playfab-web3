@@ -3,7 +3,11 @@ const { Web3 } = require('web3');
 const fs = require('fs').promises;
 require('dotenv').config(); // This loads the environment variables from the .env file
 
-async function batchTransfer(recipients, amounts) {
+async function distributeDailyRewards(recipients, performanceScores) {
+    const dailyRewardPool = 100; // Total tokens available for daily rewards
+    const totalPerformanceScore = performanceScores.reduce((acc, score) => acc + score, 0);
+    const rewards = performanceScores.map(score => (score / totalPerformanceScore) * dailyRewardPool);
+
     // Provider URL for Goerli
     const providerUrl = "https://eth-goerli.g.alchemy.com/v2/5kJ19pS_d17Gf4Cj8Y7Rcu69MSZRZlYF";
     const privateKey = process.env.PRIVATE_KEY; // Private key of your account
@@ -28,8 +32,8 @@ async function batchTransfer(recipients, amounts) {
     // Get the contract address
     const tokenAddress = "0xAEd7983819124dCeF57c82C023f60a511466E31A";
 
-    // Convert ETH amounts to Wei
-    const amountsInWei = amounts.map(amount => web3.utils.toWei(amount, "ether"));
+    // Convert token amounts to Wei
+    const amountsInWei = rewards.map(amount => web3.utils.toWei(amount.toString(), "ether"));
 
     // Create a contract instance
     const tokenContract = new web3.eth.Contract(abi, tokenAddress);
@@ -54,15 +58,22 @@ async function batchTransfer(recipients, amounts) {
     // Send the signed transaction
     const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
 
-    console.log("Batch transfer successful");
+    console.log("\x1b[33m%s\x1b[0m", "💸 Daily rewards distribution successful! 💸");
+    //console log each recepient and the amount they received
+    for (let i = 0; i < recipients.length; i++) {
+        console.log(`Recipient: ${recipients[i]}, Amount: ${rewards[i]}`);
+    }
 }
 
 // Example usage:
+/* 
 const recipients = ["0x77df32b40A8fc6B1Fad487ECe1C9B517A96c562D", "0x050731ca68ba2375eb5c843fe547c491ae82d929"];
-const amounts = ["100.33", "200.66"]; // Amount of tokens to send to each recipient
-batchTransfer(recipients, amounts)
+const performanceScores = [1500, 3000]; // Example performance scores for the recipients
+distributeDailyRewards(recipients, performanceScores)
     .then(() => process.exit(0))
     .catch((error) => {
         console.error(error);
         process.exit(1);
     });
+*/
+module.exports = { distributeDailyRewards };

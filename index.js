@@ -5,6 +5,9 @@ const { Web3 } = require('web3'); // Corrected the destructuring for Web3
 const { DefaultAzureCredential } = require('@azure/identity');
 const { SecretClient } = require('@azure/keyvault-secrets');
 
+const { distributeDailyRewards } = require('./rewardDistributor');
+
+
 require('dotenv').config(); // This loads the environment variables from the .env file
 
 // Azure Key Vault setup
@@ -30,48 +33,58 @@ app.use(bodyParser.json());
 const web3 = new Web3('https://ethereum-goerli.publicnode.com');
 
 
-function updateUserWalletAddress(id, walletAddress) {
+
+function setUserReadOnlyData(playFabId, dataKey, dataValue) {
     return new Promise((resolve, reject) => {
         const updateDataRequest = {
-            PlayFabId: id,
+            PlayFabId: playFabId,
             Data: {
-                WalletAddress: walletAddress
+                [dataKey]: dataValue
             },
             Permission: "Private"
         };
 
         PlayFabAdmin.UpdateUserReadOnlyData(updateDataRequest, (error, result) => {
             if (error) {
-                console.error("Got an error: ", error);
+                console.error(`Got an error updating ${dataKey}:`, error);
                 reject(error);
             } else {
-                console.log("Updated user wallet address: ", result);
+                console.log(`Updated ${dataKey} successfully:`, result);
                 resolve(result);
             }
         });
     });
 }
 
-function getUserWalletAddress(id) {
+function getUserReadOnlyData(playFabId, dataKey) {
     return new Promise((resolve, reject) => {
         const getDataRequest = {
-            PlayFabId: id,
-            Keys: ["WalletAddress"]
+            PlayFabId: playFabId,
+            Keys: [dataKey]
         };
 
         PlayFabAdmin.GetUserReadOnlyData(getDataRequest, (error, result) => {
             if (error) {
-                console.error("Got an error: ", error);
+                console.error(`Got an error getting ${dataKey}:`, error);
                 reject(error);
             } else {
-                console.log("Got User Wallet Address from Playfab: ", result);
-                const walletAddress = result.data.Data.WalletAddress ? result.data.Data.WalletAddress.Value : null;
-                console.log(`Wallet Address for user ${id}: ${walletAddress}`);
-                resolve(walletAddress);
+                console.log(`Got ${dataKey} from Playfab:`, result);
+                const dataValue = result.data.Data[dataKey] ? result.data.Data[dataKey].Value : null;
+                console.log(`${dataKey} for user ${playFabId}: ${dataValue}`);
+                resolve(dataValue);
             }
         });
     });
 }
+
+function updateUserWalletAddress(id, walletAddress) {
+    return setUserReadOnlyData(id, "WalletAddress", walletAddress);
+}
+
+function getUserWalletAddress(id) {
+    return getUserReadOnlyData(id, "WalletAddress");
+}
+
 
 async function storePrivateKeyInVault(userId, privateKey) {
     await secretClient.setSecret(`PrivateKey-${userId}`, privateKey);
@@ -151,10 +164,19 @@ async function addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddr
         }
 
         console.log("List of users with wallets and performance scores: ", usersWithWallets);
+
+        // Extract recipients and performanceScores from usersWithWallets
+        const recipients = usersWithWallets.map(user => user.walletAddress);
+        const performanceScores = usersWithWallets.map(user => user.performanceScore);
+
+        // use these arrays distributeDailyRewards function
+        await distributeDailyRewards(recipients, performanceScores);
+
     } catch (error) {
         console.error("An error occurred:", error);
     }
 }
+
 
 
 
