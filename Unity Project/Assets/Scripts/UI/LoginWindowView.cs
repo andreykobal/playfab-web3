@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using PlayFab;
 using PlayFab.ClientModels;
+using System.Collections.Generic;
 
 public class LoginWindowView : MonoBehaviour
 {
@@ -44,6 +45,9 @@ public class LoginWindowView : MonoBehaviour
     private PlayFabAuthService _AuthService = PlayFabAuthService.Instance;
 
     public AuthenticateSessionTicket authenticateSessionTicket;
+    public Text WalletAddressText;
+
+
 
     public void Awake()
     {
@@ -93,6 +97,34 @@ public class LoginWindowView : MonoBehaviour
         _AuthService.Authenticate();
     }
 
+    /// <summary>
+    /// Retricve the user's wallet address from PlayFab
+    /// </summary>
+    private void RetrieveUserWalletAddress(string playFabId)
+    {
+        PlayFabClientAPI.GetUserReadOnlyData(new GetUserDataRequest
+        {
+            PlayFabId = playFabId,
+            Keys = new List<string> { "WalletAddress" } // Specify the key to retrieve for efficiency
+        }, result =>
+        {
+            if (result.Data.ContainsKey("WalletAddress"))
+            {
+                Debug.Log("Wallet Address: " + result.Data["WalletAddress"].Value);
+                WalletAddressText.text = "Wallet Address: " + result.Data["WalletAddress"].Value;
+            }
+            else
+            {
+                Debug.Log("Wallet Address not found");
+            }
+        }, error =>
+        {
+            Debug.Log("Got error retrieving Wallet Address:");
+            Debug.Log(error.GenerateErrorReport());
+        });
+    }
+
+
 
     /// <summary>
     /// Login Successfully - Goes to next screen.
@@ -102,7 +134,13 @@ public class LoginWindowView : MonoBehaviour
     {
         Debug.LogFormat("Logged In as: {0}", result.PlayFabId);
         Debug.LogFormat("Session Ticket: {0}", result.SessionTicket);
-        authenticateSessionTicket.Authenticate(result.SessionTicket);
+
+        // Pass a lambda as a callback to Authenticate method
+        authenticateSessionTicket.Authenticate(result.SessionTicket, () =>
+        {
+            Debug.Log("Authenticated with custom server");
+            RetrieveUserWalletAddress(result.PlayFabId);
+        });
 
         StatusText.text = "";
         LoginPanel.SetActive(false);
