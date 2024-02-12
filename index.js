@@ -89,6 +89,63 @@ async function retrievePrivateKeyFromVault(userId) {
     }
 }
 
+//a function that first gets the list list of users that have a wallet address using PlayFabServer.GetTitleData and checks if the user is already in the list and if not -  adds a user to the list of users that have a wallet address using PlayFabServer.SetTitleData
+
+async function addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddress) {
+    try {
+        const getTitleDataResponse = await new Promise((resolve, reject) => {
+            PlayFabAdmin.GetTitleData({ Keys: ["UsersWithWallets"] }, (error, result) => {
+                if (error) {
+                    console.error("Error getting title data:", error);
+                    reject(error);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+
+        let usersWithWallets = getTitleDataResponse.data.Data["UsersWithWallets"] ? JSON.parse(getTitleDataResponse.data.Data["UsersWithWallets"]) : [];
+
+        const userExists = usersWithWallets.some(user => user.userId === userId);
+
+        if (!userExists) {
+            // Generate a random performance score between 1 and 100
+            // HARDCODED FOR TESTING
+            // SHOULD BE REPLACED WITH A REAL PERFORMANCE SCORE
+            const performanceScore = Math.floor(Math.random() * 100) + 1;
+
+            // Add the user with their wallet address and performance score
+            usersWithWallets.push({ userId, walletAddress, performanceScore });
+            console.log(`Adding user ${userId} with wallet address ${walletAddress} and performance score ${performanceScore} to the list.`);
+
+            await new Promise((resolve, reject) => {
+                PlayFabAdmin.SetTitleData({
+                    Key: "UsersWithWallets",
+                    Value: JSON.stringify(usersWithWallets)
+                }, (error, result) => {
+                    if (error) {
+                        console.error("Error setting title data:", error);
+                        reject(error);
+                    } else {
+                        console.log(`Successfully added user ${userId} with performance score to the list of users with wallets in title data.`);
+                        resolve(result);
+                    }
+                });
+            });
+        } else {
+            console.log(`User ${userId} is already in the list. No action taken.`);
+        }
+
+        console.log("List of users with wallets and performance scores: ", usersWithWallets);
+    } catch (error) {
+        console.error("An error occurred:", error);
+    }
+}
+
+
+
+
+
 app.post('/authenticate', async (req, res) => {
     const sessionTicket = req.body.sessionTicket;
 
@@ -119,6 +176,8 @@ app.post('/authenticate', async (req, res) => {
                     console.log(`Wallet created and stored for user ${userId}`);
                     // Update the response to include the newly created wallet address
                     res.send({ message: `Authentication successful, Wallet address for the user: ${newAccount.address}` });
+                    // Add the user to the list of users with wallets
+                    await addWalletAddressAndPerformanceScoreToTitleData(userId, newAccount.address);
                 } else {
                     // Wallet exists, log the private key if the file exists
                     const privateKey = await retrievePrivateKeyFromVault(userId);
@@ -127,7 +186,8 @@ app.post('/authenticate', async (req, res) => {
                     }
                     // Update the response to include the existing wallet address
                     res.send({ message: `Authentication successful, Wallet address for the user: ${walletAddress}` });
-
+                    // Add the user to the list of users with wallets
+                    addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddress);
                 }
             } catch (e) {
                 console.error("An error occurred during wallet management: ", e);
