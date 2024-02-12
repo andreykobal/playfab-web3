@@ -91,47 +91,61 @@ async function retrievePrivateKeyFromVault(userId) {
 
 //a function that first gets the list list of users that have a wallet address using PlayFabServer.GetTitleData and checks if the user is already in the list and if not -  adds a user to the list of users that have a wallet address using PlayFabServer.SetTitleData
 
+// Function to get title data
+async function getTitleData(keys) {
+    return new Promise((resolve, reject) => {
+        PlayFabAdmin.GetTitleData({ Keys: keys }, (error, result) => {
+            if (error) {
+                console.error("Error getting title data:", error);
+                reject(error);
+            } else {
+                resolve(result);
+            }
+        });
+    });
+}
+
+// Function to check if a user exists in the users list
+function userExists(usersWithWallets, userId) {
+    return usersWithWallets.some(user => user.userId === userId);
+}
+
+// Function to generate a random performance score
+function generatePerformanceScore() {
+    // Ideally, replace this with a real calculation/measurement of performance
+    return Math.floor(Math.random() * 100) + 1;
+}
+
+// Function to update title data with new user information
+async function updateTitleData(key, value) {
+    return new Promise((resolve, reject) => {
+        PlayFabAdmin.SetTitleData({
+            Key: key,
+            Value: JSON.stringify(value)
+        }, (error, result) => {
+            if (error) {
+                console.error("Error setting title data:", error);
+                reject(error);
+            } else {
+                resolve(result);
+            }
+        });
+    });
+}
+
+// Main function to add wallet address and performance score to title data
 async function addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddress) {
     try {
-        const getTitleDataResponse = await new Promise((resolve, reject) => {
-            PlayFabAdmin.GetTitleData({ Keys: ["UsersWithWallets"] }, (error, result) => {
-                if (error) {
-                    console.error("Error getting title data:", error);
-                    reject(error);
-                } else {
-                    resolve(result);
-                }
-            });
-        });
+        const getTitleDataResponse = await getTitleData(["UsersWithWallets"]);
 
         let usersWithWallets = getTitleDataResponse.data.Data["UsersWithWallets"] ? JSON.parse(getTitleDataResponse.data.Data["UsersWithWallets"]) : [];
 
-        const userExists = usersWithWallets.some(user => user.userId === userId);
-
-        if (!userExists) {
-            // Generate a random performance score between 1 and 100
-            // HARDCODED FOR TESTING
-            // SHOULD BE REPLACED WITH A REAL PERFORMANCE SCORE
-            const performanceScore = Math.floor(Math.random() * 100) + 1;
-
-            // Add the user with their wallet address and performance score
+        if (!userExists(usersWithWallets, userId)) {
+            const performanceScore = generatePerformanceScore();
             usersWithWallets.push({ userId, walletAddress, performanceScore });
             console.log(`Adding user ${userId} with wallet address ${walletAddress} and performance score ${performanceScore} to the list.`);
-
-            await new Promise((resolve, reject) => {
-                PlayFabAdmin.SetTitleData({
-                    Key: "UsersWithWallets",
-                    Value: JSON.stringify(usersWithWallets)
-                }, (error, result) => {
-                    if (error) {
-                        console.error("Error setting title data:", error);
-                        reject(error);
-                    } else {
-                        console.log(`Successfully added user ${userId} with performance score to the list of users with wallets in title data.`);
-                        resolve(result);
-                    }
-                });
-            });
+            await updateTitleData("UsersWithWallets", usersWithWallets);
+            console.log(`Successfully added user ${userId} with performance score to the list of users with wallets in title data.`);
         } else {
             console.log(`User ${userId} is already in the list. No action taken.`);
         }
@@ -141,6 +155,7 @@ async function addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddr
         console.error("An error occurred:", error);
     }
 }
+
 
 
 
