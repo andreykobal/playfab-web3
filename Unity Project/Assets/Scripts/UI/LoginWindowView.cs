@@ -11,6 +11,7 @@ using UnityEngine.UI;
 using PlayFab;
 using PlayFab.ClientModels;
 using System.Collections.Generic;
+using System;
 
 public class LoginWindowView : MonoBehaviour
 {
@@ -46,6 +47,7 @@ public class LoginWindowView : MonoBehaviour
 
     public AuthenticateSessionTicket authenticateSessionTicket;
     public Text WalletAddressText;
+    public Text TokenBalanceText;
 
 
 
@@ -97,32 +99,64 @@ public class LoginWindowView : MonoBehaviour
         _AuthService.Authenticate();
     }
 
+
+
     /// <summary>
-    /// Retricve the user's wallet address from PlayFab
+    /// WEB3 Playfab
     /// </summary>
-    private void RetrieveUserWalletAddress(string playFabId)
+    private void GetUserReadOnlyData(string playFabId, string key, Action<string> onSuccess, Action<string> onError)
     {
         PlayFabClientAPI.GetUserReadOnlyData(new GetUserDataRequest
         {
             PlayFabId = playFabId,
-            Keys = new List<string> { "WalletAddress" } // Specify the key to retrieve for efficiency
+            Keys = new List<string> { key } // Use the specified key
         }, result =>
         {
-            if (result.Data.ContainsKey("WalletAddress"))
+            if (result.Data.ContainsKey(key))
             {
-                Debug.Log("Wallet Address: " + result.Data["WalletAddress"].Value);
-                WalletAddressText.text = "Wallet Address: " + result.Data["WalletAddress"].Value;
+                Debug.Log($"{key}: " + result.Data[key].Value);
+                onSuccess?.Invoke(result.Data[key].Value);
             }
             else
             {
-                Debug.Log("Wallet Address not found");
+                Debug.Log($"{key} not found");
+                onSuccess?.Invoke("");
             }
         }, error =>
         {
-            Debug.Log("Got error retrieving Wallet Address:");
+            Debug.Log($"Got error retrieving {key}:");
             Debug.Log(error.GenerateErrorReport());
+            onError?.Invoke(error.GenerateErrorReport());
         });
     }
+
+    private void RetrieveUserWalletAddress(string playFabId)
+    {
+        GetUserReadOnlyData(playFabId, "WalletAddress", value =>
+        {
+            // onSuccess
+            WalletAddressText.text = "Wallet Address: " + value;
+        }, error =>
+        {
+            // onError
+            Debug.Log(error);
+        });
+    }
+
+    private void RetrieveUserTokenBalance(string playFabId)
+    {
+        GetUserReadOnlyData(playFabId, "TokenBalance", value =>
+        {
+            // onSuccess
+            TokenBalanceText.text = "Token Balance: " + value;
+        }, error =>
+        {
+            // onError
+            Debug.Log(error);
+        });
+    }
+
+
 
 
 
@@ -140,6 +174,7 @@ public class LoginWindowView : MonoBehaviour
         {
             Debug.Log("Authenticated with custom server");
             RetrieveUserWalletAddress(result.PlayFabId);
+            RetrieveUserTokenBalance(result.PlayFabId);
         });
 
         StatusText.text = "";

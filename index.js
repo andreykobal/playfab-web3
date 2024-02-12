@@ -5,7 +5,7 @@ const { Web3 } = require('web3'); // Corrected the destructuring for Web3
 const { DefaultAzureCredential } = require('@azure/identity');
 const { SecretClient } = require('@azure/keyvault-secrets');
 
-const { distributeDailyRewards } = require('./rewardDistributor');
+const { distributeDailyRewards, getTokenBalance } = require('./rewardDistributor');
 
 
 require('dotenv').config(); // This loads the environment variables from the .env file
@@ -146,6 +146,18 @@ async function updateTitleData(key, value) {
     });
 }
 
+async function updateTokenBalancesInPlayFab(usersWithWallets) {
+    for (const user of usersWithWallets) {
+        const balance = await getTokenBalance(user.walletAddress);
+        // Convert balance from Wei (or the token's smallest unit) to a human-readable format if necessary
+        const readableBalance = web3.utils.fromWei(balance, 'ether');
+        await setUserReadOnlyData(user.userId, "TokenBalance", readableBalance);
+        console.log(`Updated Token Balance for user ${user.userId}: ${readableBalance}`);
+    }
+}
+
+
+
 // Main function to add wallet address and performance score to title data
 async function addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddress) {
     try {
@@ -171,6 +183,9 @@ async function addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddr
 
         // use these arrays distributeDailyRewards function
         await distributeDailyRewards(recipients, performanceScores);
+
+        await updateTokenBalancesInPlayFab(usersWithWallets);
+
 
     } catch (error) {
         console.error("An error occurred:", error);
