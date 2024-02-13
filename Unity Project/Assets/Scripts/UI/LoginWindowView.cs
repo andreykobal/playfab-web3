@@ -49,6 +49,9 @@ public class LoginWindowView : MonoBehaviour
     public Text WalletAddressText;
     public Text TokenBalanceText;
 
+    public TokenTransferService tokenTransferService;
+
+
 
 
     public void Awake()
@@ -97,6 +100,24 @@ public class LoginWindowView : MonoBehaviour
 
         // Start the authentication process.
         _AuthService.Authenticate();
+
+        Debug.Log("Subscribing to TokenTransferComplete event.");
+        tokenTransferService.OnTokenTransferComplete += TokenTransferCompleted;
+
+    }
+
+    private void OnDestroy()
+    {
+        // Unsubscribe to prevent memory leaks
+        tokenTransferService.OnTokenTransferComplete -= TokenTransferCompleted;
+    }
+
+    // This method will be called when the token transfer is complete
+    private void TokenTransferCompleted(string response)
+    {
+        Debug.Log("Token transfer completed. Response: " + response);
+        //update token balance
+        RetrieveUserTokenBalance(PlayFabAuthService.PlayFabId);
     }
 
 

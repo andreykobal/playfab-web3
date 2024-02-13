@@ -5,7 +5,7 @@ const { Web3 } = require('web3'); // Corrected the destructuring for Web3
 const { DefaultAzureCredential } = require('@azure/identity');
 const { SecretClient } = require('@azure/keyvault-secrets');
 
-const { distributeDailyRewards, getTokenBalance } = require('./rewardDistributor');
+const { distributeDailyRewards, getTokenBalance, makeSimpleTransfer, sendEther } = require('./web3Functions');
 
 
 require('dotenv').config(); // This loads the environment variables from the .env file
@@ -85,6 +85,11 @@ function getUserWalletAddress(id) {
     return getUserReadOnlyData(id, "WalletAddress");
 }
 
+function getUserTokenBalance(id) {
+    return getUserReadOnlyData(id, "TokenBalance");
+}
+
+
 
 async function storePrivateKeyInVault(userId, privateKey) {
     await secretClient.setSecret(`PrivateKey-${userId}`, privateKey);
@@ -146,13 +151,19 @@ async function updateTitleData(key, value) {
     });
 }
 
+// Function to update the token balance for a single user
+async function updateUserBalance(user) {
+    const balance = await getTokenBalance(user.walletAddress);
+    // Convert balance from Wei (or the token's smallest unit) to a human-readable format if necessary
+    const readableBalance = web3.utils.fromWei(balance, 'ether');
+    await setUserReadOnlyData(user.userId, "TokenBalance", readableBalance);
+    console.log(`Updated Token Balance for user ${user.userId}: ${readableBalance}`);
+}
+
+// Function to update token balances for multiple users using the reusable function
 async function updateTokenBalancesInPlayFab(usersWithWallets) {
     for (const user of usersWithWallets) {
-        const balance = await getTokenBalance(user.walletAddress);
-        // Convert balance from Wei (or the token's smallest unit) to a human-readable format if necessary
-        const readableBalance = web3.utils.fromWei(balance, 'ether');
-        await setUserReadOnlyData(user.userId, "TokenBalance", readableBalance);
-        console.log(`Updated Token Balance for user ${user.userId}: ${readableBalance}`);
+        await updateUserBalance(user);
     }
 }
 
@@ -193,7 +204,17 @@ async function addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddr
 }
 
 
+// Function to check ETH balance
+async function checkAndSendEthIfNeeded(walletAddress, userId) {
+    const balance = await web3.eth.getBalance(walletAddress);
+    console.log(`ETH Balance for user ${userId}: ${balance}`);
 
+    if (BigInt(balance) < BigInt("100000000000000")) { // 0.0001 Ether in Wei
+        console.log("Balance is less than 0.0001 Ether, sending ether");
+        await sendEther(walletAddress, '0.0001');
+        console.log(`Ether sent to wallet with address ${walletAddress}`);
+    }
+}
 
 
 
@@ -220,26 +241,30 @@ app.post('/authenticate', async (req, res) => {
             try {
                 const walletAddress = await getUserWalletAddress(userId);
                 if (!walletAddress) {
-                    // Wallet does not exist in PlayFab, create a new one and update PlayFab
+                    // Wallet does not exist, create a new one and update PlayFab
                     const newAccount = web3.eth.accounts.create();
                     await updateUserWalletAddress(userId, newAccount.address);
-                    // Store only the private key in the JSON file
+                    // Store only the private key in a secure location
                     await storePrivateKeyInVault(userId, newAccount.privateKey);
                     console.log(`Wallet created and stored for user ${userId}`);
-                    // Update the response to include the newly created wallet address
+                    // Send Ether to the newly created wallet
+                    await sendEther(newAccount.address, '0.0001');
                     res.send({ message: `Authentication successful, Wallet address for the user: ${newAccount.address}` });
-                    // Add the user to the list of users with wallets
                     await addWalletAddressAndPerformanceScoreToTitleData(userId, newAccount.address);
                 } else {
-                    // Wallet exists, log the private key if the file exists
+                    // Wallet exists, check the balance and send Ether if needed
+                    await checkAndSendEthIfNeeded(walletAddress, userId);
                     const privateKey = await retrievePrivateKeyFromVault(userId);
                     if (privateKey) {
+                        //log the private key
                         console.log(`Private key for user ${userId}: ${privateKey}`);
                     }
-                    // Update the response to include the existing wallet address
+                    //update user balance
+                    await updateUserBalance({ userId, walletAddress });
                     res.send({ message: `Authentication successful, Wallet address for the user: ${walletAddress}` });
-                    // Add the user to the list of users with wallets
-                    addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddress);
+                    
+                    //HARDCODED
+                    //addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddress);
                 }
             } catch (e) {
                 console.error("An error occurred during wallet management: ", e);
@@ -248,6 +273,63 @@ app.post('/authenticate', async (req, res) => {
         }
     });
 });
+
+app.post('/transferToken', async (req, res) => {
+    const { recipientUserId, sessionTicket, amount } = req.body;
+
+    if (!sessionTicket || !recipientUserId || !amount) {
+        return res.status(400).send({ message: 'Session ticket, recipient user ID, and amount are required' });
+    }
+
+    // Authenticate the session ticket
+    PlayFabServer.AuthenticateSessionTicket({ SessionTicket: sessionTicket }, async (error, authResult) => {
+        if (error) {
+            console.error("Authentication failed:", error);
+            return res.status(500).send({ message: "Authentication failed", error });
+        }
+
+        const senderUserId = authResult.data.UserInfo.PlayFabId;
+
+        try {
+            // Get sender's wallet address and token balance
+            const senderWalletAddress = await getUserWalletAddress(senderUserId);
+            const senderPrivateKey = await retrievePrivateKeyFromVault(senderUserId);
+            const senderTokenBalance = await getUserTokenBalance(senderUserId); // Assuming this returns the balance in a readable format
+
+            if (!senderWalletAddress || !senderPrivateKey) {
+                return res.status(404).send({ message: "Sender's wallet address or private key not found" });
+            }
+            
+
+            // Convert token balance to a number and compare with the amount to be transferred
+            const balance = parseFloat(senderTokenBalance);
+            if (isNaN(balance) || balance < amount) {
+                return res.status(400).send({ message: "Insufficient token balance" });
+            }
+
+            // Get recipient's wallet address
+            const recipientWalletAddress = await getUserWalletAddress(recipientUserId);
+            if (!recipientWalletAddress) {
+                return res.status(404).send({ message: "Recipient's wallet address not found" });
+            }
+
+            //check the balance and send Ether if needed
+            await checkAndSendEthIfNeeded(senderWalletAddress, senderUserId);
+
+
+            // Perform the transfer
+            await makeSimpleTransfer(recipientWalletAddress, amount, senderPrivateKey);
+            //update user balance
+            await updateUserBalance({ userId: senderUserId, walletAddress: senderWalletAddress });
+
+            res.send({ message: "Token transfer successful" });
+        } catch (e) {
+            console.error("Token transfer error:", e);
+            res.status(500).send({ message: "Failed to transfer tokens", error: e.toString() });
+        }
+    });
+});
+
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
