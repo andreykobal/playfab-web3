@@ -247,18 +247,12 @@ app.post('/authenticate', async (req, res) => {
                     // Store only the private key in a secure location
                     await storePrivateKeyInVault(userId, newAccount.privateKey);
                     console.log(`Wallet created and stored for user ${userId}`);
-                    // Send Ether to the newly created wallet
-                    await sendEther(newAccount.address, '0.0001');
+                    await updateUserBalance({ userId, walletAddress: newAccount.address});
                     res.send({ message: `Authentication successful, Wallet address for the user: ${newAccount.address}` });
-                    await addWalletAddressAndPerformanceScoreToTitleData(userId, newAccount.address);
+                    
+                    //HARDCODED
+                    //await addWalletAddressAndPerformanceScoreToTitleData(userId, newAccount.address);
                 } else {
-                    // Wallet exists, check the balance and send Ether if needed
-                    await checkAndSendEthIfNeeded(walletAddress, userId);
-                    const privateKey = await retrievePrivateKeyFromVault(userId);
-                    if (privateKey) {
-                        //log the private key
-                        console.log(`Private key for user ${userId}: ${privateKey}`);
-                    }
                     //update user balance
                     await updateUserBalance({ userId, walletAddress });
                     res.send({ message: `Authentication successful, Wallet address for the user: ${walletAddress}` });
@@ -295,6 +289,10 @@ app.post('/transferToken', async (req, res) => {
             const senderWalletAddress = await getUserWalletAddress(senderUserId);
             const senderPrivateKey = await retrievePrivateKeyFromVault(senderUserId);
             const senderTokenBalance = await getUserTokenBalance(senderUserId); // Assuming this returns the balance in a readable format
+            // OR check balance with getTokenBalance 
+            //const senderTokenBalance = await getTokenBalance(senderWalletAddress);
+
+
 
             if (!senderWalletAddress || !senderPrivateKey) {
                 return res.status(404).send({ message: "Sender's wallet address or private key not found" });
