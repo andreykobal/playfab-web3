@@ -216,57 +216,62 @@ async function checkAndSendEthIfNeeded(walletAddress, userId) {
     }
 }
 
+// Function to authenticate session ticket
+async function authenticateSessionTicket(sessionTicket) {
+    return new Promise((resolve, reject) => {
+        PlayFabServer.AuthenticateSessionTicket({ SessionTicket: sessionTicket }, (error, result) => {
+            if (error) {
+                console.error("Authentication failed:", error);
+                reject(error);
+            } else {
+                resolve(result.data.UserInfo.PlayFabId);
+            }
+        });
+    });
+}
+
+// Function to handle wallet management and response
+async function manageWalletAndRespond(userId, res) {
+    try {
+        let walletAddress = await getUserWalletAddress(userId);
+        if (!walletAddress) {
+            // Wallet does not exist, create a new one and update PlayFab
+            const newAccount = web3.eth.accounts.create();
+            await updateUserWalletAddress(userId, newAccount.address);
+            // Store only the private key in a secure location
+            await storePrivateKeyInVault(userId, newAccount.privateKey);
+            console.log(`Wallet created and stored for user ${userId}`);
+            await updateUserBalance({ userId, walletAddress: newAccount.address });
+            walletAddress = newAccount.address; // Update for response
+        } else {
+            // Update user balance
+            await updateUserBalance({ userId, walletAddress });
+        }
+        res.send({ message: `Authentication successful, Wallet address for the user: ${walletAddress}` });
+    } catch (e) {
+        console.error("An error occurred during wallet management: ", e);
+        res.status(500).send({ message: "Failed to manage wallet" });
+    }
+}
 
 
 
+
+// Refactor the '/authenticate' endpoint
 app.post('/authenticate', async (req, res) => {
     const sessionTicket = req.body.sessionTicket;
-
     if (!sessionTicket) {
         return res.status(400).send({ message: 'Session ticket is required' });
     }
 
-    const request = {
-        SessionTicket: sessionTicket,
-    };
-
-    PlayFabServer.AuthenticateSessionTicket(request, async (error, result) => {
-        if (error) {
-            console.error("Got an error: ", error);
-            res.status(500).send({ message: "Authentication failed", error });
-        } else {
-            console.log("\x1b[36m%s\x1b[0m", "Got a result: ", result);
-
-            const userId = result.data.UserInfo.PlayFabId;
-            try {
-                const walletAddress = await getUserWalletAddress(userId);
-                if (!walletAddress) {
-                    // Wallet does not exist, create a new one and update PlayFab
-                    const newAccount = web3.eth.accounts.create();
-                    await updateUserWalletAddress(userId, newAccount.address);
-                    // Store only the private key in a secure location
-                    await storePrivateKeyInVault(userId, newAccount.privateKey);
-                    console.log(`Wallet created and stored for user ${userId}`);
-                    await updateUserBalance({ userId, walletAddress: newAccount.address});
-                    res.send({ message: `Authentication successful, Wallet address for the user: ${newAccount.address}` });
-                    
-                    //HARDCODED
-                    //await addWalletAddressAndPerformanceScoreToTitleData(userId, newAccount.address);
-                } else {
-                    //update user balance
-                    await updateUserBalance({ userId, walletAddress });
-                    res.send({ message: `Authentication successful, Wallet address for the user: ${walletAddress}` });
-                    
-                    //HARDCODED
-                    //addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddress);
-                }
-            } catch (e) {
-                console.error("An error occurred during wallet management: ", e);
-                res.status(500).send({ message: "Failed to manage wallet" });
-            }
-        }
-    });
+    try {
+        const userId = await authenticateSessionTicket(sessionTicket);
+        await manageWalletAndRespond(userId, res);
+    } catch (error) {
+        res.status(500).send({ message: "Authentication failed", error });
+    }
 });
+
 
 app.post('/transferToken', async (req, res) => {
     const { recipientUserId, sessionTicket, amount } = req.body;
@@ -275,57 +280,50 @@ app.post('/transferToken', async (req, res) => {
         return res.status(400).send({ message: 'Session ticket, recipient user ID, and amount are required' });
     }
 
-    // Authenticate the session ticket
-    PlayFabServer.AuthenticateSessionTicket({ SessionTicket: sessionTicket }, async (error, authResult) => {
-        if (error) {
-            console.error("Authentication failed:", error);
-            return res.status(500).send({ message: "Authentication failed", error });
+    try {
+
+        const senderUserId = await authenticateSessionTicket(sessionTicket);
+
+        // Get sender's wallet address and token balance
+        const senderWalletAddress = await getUserWalletAddress(senderUserId);
+        const senderPrivateKey = await retrievePrivateKeyFromVault(senderUserId);
+        const senderTokenBalance = await getUserTokenBalance(senderUserId); // Assuming this returns the balance in a readable format
+        // OR check balance with getTokenBalance 
+        //const senderTokenBalance = await getTokenBalance(senderWalletAddress);
+
+
+
+        if (!senderWalletAddress || !senderPrivateKey) {
+            return res.status(404).send({ message: "Sender's wallet address or private key not found" });
         }
 
-        const senderUserId = authResult.data.UserInfo.PlayFabId;
 
-        try {
-            // Get sender's wallet address and token balance
-            const senderWalletAddress = await getUserWalletAddress(senderUserId);
-            const senderPrivateKey = await retrievePrivateKeyFromVault(senderUserId);
-            const senderTokenBalance = await getUserTokenBalance(senderUserId); // Assuming this returns the balance in a readable format
-            // OR check balance with getTokenBalance 
-            //const senderTokenBalance = await getTokenBalance(senderWalletAddress);
-
-
-
-            if (!senderWalletAddress || !senderPrivateKey) {
-                return res.status(404).send({ message: "Sender's wallet address or private key not found" });
-            }
-            
-
-            // Convert token balance to a number and compare with the amount to be transferred
-            const balance = parseFloat(senderTokenBalance);
-            if (isNaN(balance) || balance < amount) {
-                return res.status(400).send({ message: "Insufficient token balance" });
-            }
-
-            // Get recipient's wallet address
-            const recipientWalletAddress = await getUserWalletAddress(recipientUserId);
-            if (!recipientWalletAddress) {
-                return res.status(404).send({ message: "Recipient's wallet address not found" });
-            }
-
-            //check the balance and send Ether if needed
-            await checkAndSendEthIfNeeded(senderWalletAddress, senderUserId);
-
-
-            // Perform the transfer
-            await makeSimpleTransfer(recipientWalletAddress, amount, senderPrivateKey);
-            //update user balance
-            await updateUserBalance({ userId: senderUserId, walletAddress: senderWalletAddress });
-
-            res.send({ message: "Token transfer successful" });
-        } catch (e) {
-            console.error("Token transfer error:", e);
-            res.status(500).send({ message: "Failed to transfer tokens", error: e.toString() });
+        // Convert token balance to a number and compare with the amount to be transferred
+        const balance = parseFloat(senderTokenBalance);
+        if (isNaN(balance) || balance < amount) {
+            return res.status(400).send({ message: "Insufficient token balance" });
         }
-    });
+
+        // Get recipient's wallet address
+        const recipientWalletAddress = await getUserWalletAddress(recipientUserId);
+        if (!recipientWalletAddress) {
+            return res.status(404).send({ message: "Recipient's wallet address not found" });
+        }
+
+        //check the balance and send Ether if needed
+        await checkAndSendEthIfNeeded(senderWalletAddress, senderUserId);
+
+
+        // Perform the transfer
+        await makeSimpleTransfer(recipientWalletAddress, amount, senderPrivateKey);
+        //update user balance
+        await updateUserBalance({ userId: senderUserId, walletAddress: senderWalletAddress });
+
+        res.send({ message: "Token transfer successful" });
+    } catch (e) {
+        console.error("Token transfer error:", e);
+        res.status(500).send({ message: "Failed to transfer tokens", error: e.toString() });
+    }
 });
 
 
