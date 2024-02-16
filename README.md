@@ -1,4 +1,4 @@
-# PlayFab Web3 SDK Documentation
+# PlayMask: PlayFab Web3 SDK Documentation
 
 ![playmask](https://github.com/andreykobal/playfab-web3/assets/19206978/e4cc1fb2-bbc6-488a-8bc4-de75f35774ab)
 
