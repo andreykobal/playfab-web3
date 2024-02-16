@@ -1,6 +1,6 @@
 # PlayFab Web3 SDK Documentation
 
-![playfabweb3](https://github.com/andreykobal/playfab-web3/assets/19206978/e2e7944d-619f-4ed0-b63b-c1610c72dfb9)
+![playmask](https://github.com/andreykobal/playfab-web3/assets/19206978/e4cc1fb2-bbc6-488a-8bc4-de75f35774ab)
 
 
 ## Introduction
