@@ -44,21 +44,12 @@ The SDK is organized into two main components:
 
 ## Features
 
-### Smart Contract Interaction
-
-- Deploy and interact with Ethereum smart contracts using Hardhat.
-- Includes a sample ERC20 token contract.
-
-### Unity Integration
-
-- Manage player wallet addresses and token balances within Unity.
-- Interface with PlayFab for secure data storage and retrieval.
-
-### Web3 Functionality
-
-- Perform cryptocurrency transactions, including token transfers.
-- Retrieve and update Ethereum wallet balances.
-- Securely store and access private keys using Azure Key Vault.
+- **Authentication**: Allow users to log in using email and password or as a guest.
+- **Registration**: Enable new users to register by providing an email and password.
+- **Remember Me**: Option for users to stay logged in across sessions.
+- **Token Transfer**: Facilitate the transfer of tokens between users.
+- **Daily Rewards**: Distribute daily rewards to players.
+- **Wallet Integration**: Display wallet addresses and token balances for users.
 
 ## Usage
 
