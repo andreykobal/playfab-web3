@@ -9,7 +9,7 @@ The PlayFab Web3 SDK integrates blockchain functionalities with PlayFab, enablin
 
 ## Structure
 
-The SDK is organized into two main components:
+The SDK is organized into three main components:
 
 - **Smart Contract Development Environment**: Utilizes Hardhat for compiling, deploying, and testing Ethereum smart contracts.
 - **Unity Project**: Integrates PlayFab SDK with Ethereum blockchain functionalities, enabling the management of blockchain-related data and interactions within a Unity game.
