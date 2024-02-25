@@ -1,6 +1,6 @@
-# PlayMask: PlayFab Web3 SDK Documentation
+# PlayMask: Azure PlayFab + Web3 SDK for Next-Gen Gaming Documentation
 
-![playmask](https://github.com/andreykobal/playfab-web3/assets/19206978/e4cc1fb2-bbc6-488a-8bc4-de75f35774ab)
+![playmask-big](https://github.com/andreykobal/playfab-web3/assets/19206978/085dea8f-f478-4329-9633-fd8a689cee1f)
 
 
 ## Introduction
