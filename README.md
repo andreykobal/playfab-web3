@@ -242,7 +242,7 @@ We welcome contributions and suggestions! Please open issues or pull requests on
 
 ## License
 
-This project is licensed under the MIT License - see the `LICENSE` file in the `_SmartContract` directory for details.
+This project is licensed under the MIT License - see the `LICENSE` file for details.
 
 ## Acknowledgments
 
