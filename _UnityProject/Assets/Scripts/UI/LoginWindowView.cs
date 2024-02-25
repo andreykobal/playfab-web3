@@ -55,6 +55,9 @@ public class LoginWindowView : MonoBehaviour
     public TokenTransferService tokenTransferService;
     public DailyRewardsService dailyRewardsService;
 
+    public GameObject gameObjectToActivate; // Reference to the game object to activate/deactivate
+
+
 
 
 
@@ -280,6 +283,10 @@ public class LoginWindowView : MonoBehaviour
         Debug.LogFormat("Logged In as: {0}", result.PlayFabId);
         Debug.LogFormat("Session Ticket: {0}", result.SessionTicket);
 
+        // Activate the game object when logged in
+        if (gameObjectToActivate != null)
+            gameObjectToActivate.SetActive(true);
+
         // Pass a lambda as a callback to Authenticate method
         authenticateSessionTicket.Authenticate(result.SessionTicket, () =>
         {
@@ -329,6 +336,10 @@ public class LoginWindowView : MonoBehaviour
     /// </summary>
     private void OnDisplayAuthentication()
     {
+        // Deactivate the game object when not logged in
+        if (gameObjectToActivate != null)
+            gameObjectToActivate.SetActive(false);
+
         //Here we have choses what to do when AuthType is None.
         LoginPanel.SetActive(true);
         LoggedinPanel.SetActive(false);
