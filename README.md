@@ -56,16 +56,155 @@ The SDK is organized into three main components:
 - **Daily Rewards**: Distribute daily rewards to players.
 - **Wallet Integration**: Display wallet addresses and token balances for users.
 
+
 ## Usage
 
 ### Unity
 
 - Use the provided Unity scripts to authenticate players, manage wallet addresses, and initiate blockchain transactions.
 
-### Node.js Server
+## Node.js Server
 
 - The `index.js` file includes Express routes for handling blockchain operations such as transferring tokens and checking balances.
 - Utilize the `web3Functions.js` utility functions for direct blockchain interactions.
+
+
+### Technologies Used
+
+- **Node.js**: Backend server environment.
+- **Express.js**: Web framework for Node.js.
+- **PlayFab SDK**: Enables integration with PlayFab services for user authentication and data management.
+- **Web3.js**: Library for interacting with Ethereum blockchain.
+- **Azure Key Vault**: Securely store private keys.
+- **@azure/identity**: Azure Identity SDK for authentication.
+- **@azure/keyvault-secrets**: Azure Key Vault Secrets SDK for accessing secrets.
+
+
+
+### Endpoints
+
+- **POST /authenticate**: Handles user authentication and wallet management.
+- **POST /distributedailyrewards**: Initiates the distribution of daily rewards.
+- **POST /transferToken**: Facilitates token transfers between users.
+
+
+## Setup Instructions
+
+1. Clone the repository.
+2. Install dependencies with `npm install`.
+3. Configure environment variables by creating a `.env` file. Refer to `.env.example` for required variables.
+4. Start the server with `npm start`.
+
+## Code Snippets
+
+### Authenticating Session Ticket
+
+```javascript
+app.post('/authenticate', async (req, res) => {
+    const sessionTicket = req.body.sessionTicket;
+    if (!sessionTicket) {
+        return res.status(400).send({ message: 'Session ticket is required' });
+    }
+
+    try {
+        const userId = await authenticateSessionTicket(sessionTicket);
+        await manageWalletAndRespond(userId, res);
+    } catch (error) {
+        res.status(500).send({ message: "Authentication failed", error });
+    }
+});
+```
+
+This endpoint authenticates the session ticket, retrieves the user's PlayFabId, manages the user's wallet, and responds with the wallet address.
+
+### Distributing Daily Rewards
+
+```javascript
+app.post('/distributedailyrewards', async (req, res) => {
+    const { sessionTicket } = req.body;
+
+    // Check if sessionTicket was provided in the request
+    if (!sessionTicket) {
+        return res.status(400).send({ message: 'Session ticket is required' });
+    }
+
+    try {
+        // Authenticate the session ticket to get the user's PlayFabId
+        const userId = await authenticateSessionTicket(sessionTicket);
+
+        // Assume getUserWalletAddress is a function that retrieves the user's wallet address
+        // If not existing, it should be implemented based on your application's logic
+        const walletAddress = await getUserWalletAddress(userId);
+
+        // Invoke the function to add wallet address and performance score to title data
+        // This function will handle checking if the user exists, updating or adding performance score,
+        // and distributing daily rewards and updating token balances
+        await addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddress);
+
+        // Send a success response
+        res.send({ message: "Daily rewards distributed successfully." });
+    } catch (error) {
+        console.error("An error occurred during daily rewards distribution:", error);
+        res.status(500).send({ message: "Failed to distribute daily rewards", error: error.toString() });
+    }
+});
+```
+
+This endpoint distributes daily rewards to users based on their performance scores and updates token balances.
+
+### Token Transfer
+
+```javascript
+app.post('/transferToken', async (req, res) => {
+    const { recipientUserId, sessionTicket, amount } = req.body;
+
+    if (!sessionTicket || !recipientUserId || !amount) {
+        return res.status(400).send({ message: 'Session ticket, recipient user ID, and amount are required' });
+    }
+
+    try {
+
+        const senderUserId = await authenticateSessionTicket(sessionTicket);
+
+        // Get sender's wallet address and token balance
+        const senderWalletAddress = await getUserWalletAddress(senderUserId);
+        const senderPrivateKey = await retrievePrivateKeyFromVault(senderUserId);
+        const senderTokenBalance = await getUserTokenBalance(senderUserId);
+
+        if (!senderWalletAddress || !senderPrivateKey) {
+            return res.status(404).send({ message: "Sender's wallet address or private key not found" });
+        }
+
+        // Convert token balance to a number and compare with the amount to be transferred
+        const balance = parseFloat(senderTokenBalance);
+        if (isNaN(balance) || balance < amount) {
+            return res.status(400).send({ message: "Insufficient token balance" });
+        }
+
+        // Get recipient's wallet address
+        const recipientWalletAddress = await getUserWalletAddress(recipientUserId);
+        if (!recipientWalletAddress) {
+            return res.status(404).send({ message: "Recipient's wallet address not found" });
+        }
+
+        // Perform the transfer
+        await makeSimpleTransfer(recipientWalletAddress, amount, senderPrivateKey);
+        //update user balance
+        await updateUserBalance({ userId: senderUserId, walletAddress: senderWalletAddress });
+
+        res.send({ message: "Token transfer successful" });
+    } catch (e) {
+        console.error("Token transfer error:", e);
+        res.status(500).send({ message: "Failed to transfer tokens", error: e.toString() });
+    }
+});
+```
+
+This endpoint facilitates token transfers between users, ensuring the sender has sufficient balance and handling the transfer process securely.
+
+## Conclusion
+
+This README provides an overview of the project, setup instructions, and key code snippets for authenticating users, distributing rewards, and transferring tokens. For detailed implementation, refer to the codebase.
 
 ## Security
 
