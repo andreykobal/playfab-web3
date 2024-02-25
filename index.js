@@ -90,6 +90,39 @@ function getUserTokenBalance(id) {
 }
 
 
+// Function to fetch user data using PlayFabAdmin.GetUserData
+function getAdminUserData(playFabId, dataKey) {
+    return new Promise((resolve, reject) => {
+        PlayFabAdmin.GetUserData({
+            PlayFabId: playFabId,
+            Keys: [dataKey]
+        }, (error, result) => {
+            if (error) {
+                console.error(`Got an error getting ${dataKey}:`, error);
+                reject(error);
+            } else {
+                console.log(`Got ${dataKey} from PlayFab:`, result);
+                // Extracting and returning the value for the specific key
+                const dataValue = result.data.Data[dataKey] ? result.data.Data[dataKey].Value : null;
+                resolve(dataValue);
+            }
+        });
+    });
+}
+
+// Function to specifically fetch the PerformancePoints for a user
+function getPerformancePointsAdmin(playFabId) {
+    return getAdminUserData(playFabId, "PerformancePoints")
+        .then(performancePoints => {
+            console.log(`Performance Points for user ${playFabId}: ${performancePoints}`);
+            return performancePoints; // This will be the resolved value of the promise
+        })
+        .catch(error => {
+            console.error(`Error fetching Performance Points for user ${playFabId}:`, error);
+            throw error; // Re-throw the error to be handled by the caller
+        });
+}
+
 
 async function storePrivateKeyInVault(userId, privateKey) {
     await secretClient.setSecret(`PrivateKey-${userId}`, privateKey);
@@ -169,39 +202,45 @@ async function updateTokenBalancesInPlayFab(usersWithWallets) {
 
 
 
-// Main function to add wallet address and performance score to title data
+// Updated function to add wallet address and performance score to title data
 async function addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddress) {
     try {
         const getTitleDataResponse = await getTitleData(["UsersWithWallets"]);
-
         let usersWithWallets = getTitleDataResponse.data.Data["UsersWithWallets"] ? JSON.parse(getTitleDataResponse.data.Data["UsersWithWallets"]) : [];
+        let userFound = usersWithWallets.find(user => user.userId === userId);
 
-        if (!userExists(usersWithWallets, userId)) {
-            const performanceScore = generatePerformanceScore();
-            usersWithWallets.push({ userId, walletAddress, performanceScore });
-            console.log(`Adding user ${userId} with wallet address ${walletAddress} and performance score ${performanceScore} to the list.`);
-            await updateTitleData("UsersWithWallets", usersWithWallets);
-            console.log(`Successfully added user ${userId} with performance score to the list of users with wallets in title data.`);
+        // Fetch performance points using getPerformancePointsAdmin
+        const performancePoints = await getPerformancePointsAdmin(userId);
+
+        if (userFound) {
+            // User exists, update their performance score
+            console.log(`User ${userId} found. Updating performance points.`);
+            userFound.performanceScore = parseInt(performancePoints, 10) || generatePerformanceScore(); // Use fetched performance points or generate
         } else {
-            console.log(`User ${userId} is already in the list. No action taken.`);
+            // User does not exist, add them with wallet address and fetched performance points
+            console.log(`Adding user ${userId} with wallet address ${walletAddress} and performance points.`);
+            usersWithWallets.push({
+                userId,
+                walletAddress,
+                performanceScore: parseInt(performancePoints, 10) || generatePerformanceScore() // Use fetched performance points or generate
+            });
         }
 
-        console.log("List of users with wallets and performance scores: ", usersWithWallets);
+        // Update the title data with the new or updated list of users
+        await updateTitleData("UsersWithWallets", usersWithWallets);
+        console.log(`Successfully updated title data for users with wallets.`);
 
-        // Extract recipients and performanceScores from usersWithWallets
+        // Proceed with distributing daily rewards and updating token balances in PlayFab
         const recipients = usersWithWallets.map(user => user.walletAddress);
         const performanceScores = usersWithWallets.map(user => user.performanceScore);
-
-        // use these arrays distributeDailyRewards function
         await distributeDailyRewards(recipients, performanceScores);
-
         await updateTokenBalancesInPlayFab(usersWithWallets);
 
-
     } catch (error) {
-        console.error("An error occurred:", error);
+        console.error("An error occurred while adding wallet address and performance score to title data:", error);
     }
 }
+
 
 
 // Function to check ETH balance
@@ -271,6 +310,37 @@ app.post('/authenticate', async (req, res) => {
         res.status(500).send({ message: "Authentication failed", error });
     }
 });
+
+// New endpoint: /distributedailyrewards
+app.post('/distributedailyrewards', async (req, res) => {
+    const { sessionTicket } = req.body;
+
+    // Check if sessionTicket was provided in the request
+    if (!sessionTicket) {
+        return res.status(400).send({ message: 'Session ticket is required' });
+    }
+
+    try {
+        // Authenticate the session ticket to get the user's PlayFabId
+        const userId = await authenticateSessionTicket(sessionTicket);
+
+        // Assume getUserWalletAddress is a function that retrieves the user's wallet address
+        // If not existing, it should be implemented based on your application's logic
+        const walletAddress = await getUserWalletAddress(userId);
+
+        // Invoke the function to add wallet address and performance score to title data
+        // This function will handle checking if the user exists, updating or adding performance score,
+        // and distributing daily rewards and updating token balances
+        await addWalletAddressAndPerformanceScoreToTitleData(userId, walletAddress);
+
+        // Send a success response
+        res.send({ message: "Daily rewards distributed successfully." });
+    } catch (error) {
+        console.error("An error occurred during daily rewards distribution:", error);
+        res.status(500).send({ message: "Failed to distribute daily rewards", error: error.toString() });
+    }
+});
+
 
 
 app.post('/transferToken', async (req, res) => {

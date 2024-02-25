@@ -49,6 +49,9 @@ public class LoginWindowView : MonoBehaviour
     public Text WalletAddressText;
     public Text TokenBalanceText;
 
+    public Button AddPerformancePointsButton;
+    public Button GetPerformancePointsButton;
+
     public TokenTransferService tokenTransferService;
 
 
@@ -94,6 +97,8 @@ public class LoginWindowView : MonoBehaviour
         CancelRegisterButton.onClick.AddListener(OnCancelRegisterButtonClicked);
         ResetSampleButton.onClick.AddListener(OnResetSampleButtonClicked);
         ClearSigninButton.onClick.AddListener(OnClearSigninButtonClicked);
+        AddPerformancePointsButton.onClick.AddListener(AddPerformancePoints);
+        GetPerformancePointsButton.onClick.AddListener(GetPerformancePoints);
 
         // Set the data we want at login from what we chose in our meta data.
         _AuthService.InfoRequestParams = InfoRequestParams;
@@ -119,6 +124,77 @@ public class LoginWindowView : MonoBehaviour
         //update token balance
         RetrieveUserTokenBalance(PlayFabAuthService.PlayFabId);
     }
+
+
+    public void AddPerformancePoints()
+    {
+        // First, get the current performance points
+        PlayFabClientAPI.GetUserData(new GetUserDataRequest
+        {
+            PlayFabId = PlayFabAuthService.PlayFabId,
+            Keys = new List<string> { "PerformancePoints" }
+        }, result =>
+        {
+            int currentPoints = 0;
+            if (result.Data != null && result.Data.ContainsKey("PerformancePoints"))
+            {
+                // Parse the existing points and add 100
+                int.TryParse(result.Data["PerformancePoints"].Value, out currentPoints);
+                currentPoints += 100;
+            }
+            else
+            {
+                // If there are no existing points, start with 100
+                currentPoints = 100;
+            }
+
+            // Update the performance points with the new value
+            PlayFabClientAPI.UpdateUserData(new UpdateUserDataRequest
+            {
+                Data = new Dictionary<string, string>
+                {
+                { "PerformancePoints", currentPoints.ToString() }
+                }
+            }, updateResult =>
+            {
+                Debug.Log("Performance Points added successfully");
+            }, error =>
+            {
+                Debug.Log("Got error setting Performance Points:");
+                Debug.Log(error.GenerateErrorReport());
+            });
+
+        }, error =>
+        {
+            Debug.Log("Got error retrieving Performance Points:");
+            Debug.Log(error.GenerateErrorReport());
+        });
+    }
+
+    // This function remains unchanged but is necessary for the complete workflow
+    public void GetPerformancePoints()
+    {
+        PlayFabClientAPI.GetUserData(new GetUserDataRequest
+        {
+            PlayFabId = PlayFabAuthService.PlayFabId,
+            Keys = null
+        }, result =>
+        {
+            if (result.Data != null && result.Data.ContainsKey("PerformancePoints"))
+            {
+                Debug.Log("Performance Points: " + result.Data["PerformancePoints"].Value);
+            }
+            else
+            {
+                Debug.Log("Performance Points not found");
+            }
+        }, error =>
+        {
+            Debug.Log("Got error retrieving Performance Points:");
+            Debug.Log(error.GenerateErrorReport());
+        });
+    }
+
 
 
 
