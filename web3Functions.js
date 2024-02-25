@@ -5,14 +5,14 @@ const fs = require('fs').promises;
 require('dotenv').config();
 
 // Provider URL and private key
-const providerUrl = "https://eth-goerli.g.alchemy.com/v2/5kJ19pS_d17Gf4Cj8Y7Rcu69MSZRZlYF";
+const providerUrl = "https://opbnb-testnet-rpc.publicnode.com";
 const privateKey = process.env.PRIVATE_KEY;
 
 // Initialize a new instance of Web3
 const web3 = new Web3(providerUrl);
 
 // Contract address
-const tokenAddress = "0xAEd7983819124dCeF57c82C023f60a511466E31A";
+const tokenAddress = "0xF9081D0f28A26186153Ce81828Ff86F4A3BCeab0";
 
 // Read the contract ABI asynchronously and create a contract instance
 let tokenContract; // This will hold the contract instance

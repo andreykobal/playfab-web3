@@ -30,7 +30,7 @@ const port = 3000;
 app.use(bodyParser.json());
 
 // Initialize web3 with a provider
-const web3 = new Web3('https://ethereum-goerli.publicnode.com');
+const web3 = new Web3('https://opbnb-testnet-rpc.publicnode.com');
 
 
 
