@@ -15,7 +15,11 @@ module.exports = {
     goerli: {
       url: "https://rpc.ankr.com/eth_goerli",
       accounts: [privateKey]
-    }
+    },
+    opBnbTestnet: {
+      url: "https://opbnb-testnet-rpc.publicnode.com	",
+      accounts: [privateKey]
+    },
   },
 };
 
