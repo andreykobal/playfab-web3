@@ -53,6 +53,7 @@ public class LoginWindowView : MonoBehaviour
     public Button GetPerformancePointsButton;
 
     public TokenTransferService tokenTransferService;
+    public DailyRewardsService dailyRewardsService;
 
 
 
@@ -109,12 +110,17 @@ public class LoginWindowView : MonoBehaviour
         Debug.Log("Subscribing to TokenTransferComplete event.");
         tokenTransferService.OnTokenTransferComplete += TokenTransferCompleted;
 
+        Debug.Log("Subscribing to DailyRewardsDistributionComplete event.");
+        dailyRewardsService.OnDailyRewardsDistributionComplete += DailyRewardsDistributionCompleted;
+
     }
 
     private void OnDestroy()
     {
         // Unsubscribe to prevent memory leaks
         tokenTransferService.OnTokenTransferComplete -= TokenTransferCompleted;
+
+        dailyRewardsService.OnDailyRewardsDistributionComplete -= DailyRewardsDistributionCompleted;
     }
 
     // This method will be called when the token transfer is complete
@@ -123,6 +129,14 @@ public class LoginWindowView : MonoBehaviour
         Debug.Log("Token transfer completed. Response: " + response);
         //update token balance
         RetrieveUserTokenBalance(PlayFabAuthService.PlayFabId);
+    }
+
+    // This method will be called when the daily rewards distribution is complete
+    private void DailyRewardsDistributionCompleted(string response)
+    {
+        Debug.Log("Daily rewards distribution completed. Response: " + response);
+        RetrieveUserTokenBalance(PlayFabAuthService.PlayFabId);
+
     }
 
 
