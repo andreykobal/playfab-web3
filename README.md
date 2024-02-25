@@ -67,6 +67,31 @@ The SDK is organized into two main components:
 - Private keys are stored securely in Azure Key Vault. Never store private keys in your source code or expose them to the client side.
 - Use environment variables to store sensitive information such as PlayFab secrets and Azure credentials.
 
+## Future Plans
+
+<img width="1712" alt="Untitled" src="https://github.com/andreykobal/playfab-web3/assets/19206978/d54edea8-6d89-47d0-be82-8152a21f145b">
+
+Our Future Plans:
+
+- **Tokenization of In-Game Assets**: Introducing NFT minting, dynamic NFTs, fractional ownership, rentals, and crafting for in-game assets.
+  
+- **DeFi Mechanics in Gaming**: Implementing staking, yield farming, liquidity provision, insurance products, and token burning for rewards within games.
+  
+- **Play-to-Earn (P2E)**: Offering daily quests, tournaments, micro-rewards, and escrow systems to enable players to earn while playing.
+  
+- **GameFi and Liquidity Pools**: Establishing in-game liquidity pools, cross-game asset swaps, dynamic yield pools, and token swapping mechanisms.
+  
+- **Lending and Borrowing**: Facilitating asset lending, collateralized loans, in-game credit scoring, and peer-to-peer lending for in-game assets.
+  
+- **Social and Community Features**: Introducing social quests, community governance, token-based voting, and blockchain-based achievements.
+  
+- **Interoperability**: Enabling cross-chain gaming tournaments, asset bridging, cross-chain quests, and multi-blockchain tournaments.
+  
+- **Marketplace and Trading**: Creating decentralized marketplaces, auction houses, dynamic pricing models, loyalty programs, and automated trading bots.
+  
+- **Unique Gaming Experiences**: Introducing blockchain-based quests, virtual land ownership, blockchain progression systems, and fully on-chain games.
+
+
 ## Contributing
 
 We welcome contributions and suggestions! Please open issues or pull requests on our GitHub repository for any features, bug fixes, or enhancements.
