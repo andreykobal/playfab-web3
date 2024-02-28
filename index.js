@@ -24,7 +24,7 @@ PlayFab.settings.titleId = process.env.PLAYFAB_TITLE_ID;
 PlayFab.settings.developerSecretKey = process.env.PLAYFAB_SECRET_KEY;
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8000;
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
