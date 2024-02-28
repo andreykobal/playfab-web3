@@ -39,4 +39,4 @@ jobs:
           package: .
 
       - name: Start Node.js app
-        run: node index.js
+        run: npm start
