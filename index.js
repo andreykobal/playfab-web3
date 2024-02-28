@@ -1,4 +1,6 @@
 const express = require('express');
+const cors = require('cors');
+
 const bodyParser = require('body-parser');
 const { PlayFabAdmin, PlayFabServer, PlayFab } = require('playfab-sdk');
 const { Web3 } = require('web3'); // Corrected the destructuring for Web3
@@ -25,6 +27,10 @@ PlayFab.settings.developerSecretKey = process.env.PLAYFAB_SECRET_KEY;
 
 const app = express();
 const port = process.env.PORT || 8000;
+
+// Enable CORS for all origins
+app.use(cors());
+
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
