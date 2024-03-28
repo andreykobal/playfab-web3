@@ -20,6 +20,10 @@ module.exports = {
       url: "https://opbnb-testnet-rpc.publicnode.com	",
       accounts: [privateKey]
     },
-  },
+    botanix: {
+      url: "https://node.botanixlabs.dev",
+      accounts: [privateKey]
+    },
+    }
 };
 

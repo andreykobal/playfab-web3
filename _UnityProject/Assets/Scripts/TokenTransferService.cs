@@ -50,7 +50,7 @@ public class TokenTransferService : MonoBehaviour
         Debug.Log(json);
 
         byte[] jsonToSend = Encoding.UTF8.GetBytes(json);
-        var url = "http://localhost:3000/transferToken";
+        var url = "https://wallet-manager-service.azurewebsites.net/transferToken";
         using (var request = new UnityWebRequest(url, "POST"))
         {
             request.uploadHandler = new UploadHandlerRaw(jsonToSend);

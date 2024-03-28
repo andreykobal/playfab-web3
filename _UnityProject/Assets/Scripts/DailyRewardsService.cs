@@ -42,7 +42,7 @@ public class DailyRewardsService : MonoBehaviour
         Debug.Log(json);
 
         byte[] jsonToSend = Encoding.UTF8.GetBytes(json);
-        var url = "http://localhost:3000/distributedailyrewards";
+        var url = "https://wallet-manager-service.azurewebsites.net/distributedailyrewards";
         using (var request = new UnityWebRequest(url, "POST"))
         {
             request.uploadHandler = (UploadHandler)new UploadHandlerRaw(jsonToSend);

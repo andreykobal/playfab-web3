@@ -5,14 +5,14 @@ const fs = require('fs').promises;
 require('dotenv').config();
 
 // Provider URL and private key
-const providerUrl = "https://opbnb-testnet-rpc.publicnode.com";
+const providerUrl = "https://node.botanixlabs.dev";
 const privateKey = process.env.PRIVATE_KEY;
 
 // Initialize a new instance of Web3
 const web3 = new Web3(providerUrl);
 
 // Contract address
-const tokenAddress = "0xF9081D0f28A26186153Ce81828Ff86F4A3BCeab0";
+const tokenAddress = "0xaC7e4Ad5d7557B78ebc84Dff668A06709f5Dc62B";
 
 // Read the contract ABI asynchronously and create a contract instance
 let tokenContract; // This will hold the contract instance

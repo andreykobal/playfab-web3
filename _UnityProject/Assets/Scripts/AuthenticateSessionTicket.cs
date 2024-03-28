@@ -7,7 +7,7 @@ using System.Text;
 public class AuthenticateSessionTicket : MonoBehaviour
 {
     // URL of the authentication endpoint
-    private const string AuthUrl = "http://localhost:3000/authenticate";
+    private const string AuthUrl = "http://wallet-manager-service.azurewebsites.net/authenticate";
 
     // Modified Authenticate method to accept a callback action
     public void Authenticate(string sessionTicket, Action callback)
