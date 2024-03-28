@@ -36,7 +36,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Initialize web3 with a provider
-const web3 = new Web3('https://opbnb-testnet-rpc.publicnode.com');
+const web3 = new Web3('https://node.botanixlabs.dev');
 
 
 
@@ -256,7 +256,7 @@ async function checkAndSendEthIfNeeded(walletAddress, userId) {
 
     if (BigInt(balance) < BigInt("100000000000000")) { // 0.0001 Ether in Wei
         console.log("Balance is less than 0.0001 Ether, sending ether");
-        await sendEther(walletAddress, '0.0001');
+        await sendEther(walletAddress, '0.000001');
         console.log(`Ether sent to wallet with address ${walletAddress}`);
     }
 }
