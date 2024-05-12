@@ -8,8 +8,8 @@
 The PlayFab Web3 SDK integrates blockchain functionalities with PlayFab, enabling developers to interact with Ethereum-based smart contracts and manage wallet addresses directly from Unity games and server-side scripts. This SDK is designed to bridge the gap between traditional game development and blockchain technology, offering tools for token management, cryptocurrency transactions, and smart contract deployment.
 
 ## Deployements
-- **Network**: Botanix
-- **Contract**: [0xaC7e4Ad5d7557B78ebc84Dff668A06709f5Dc62B](https://3xpl.com/botanix/address/0xaC7e4Ad5d7557B78ebc84Dff668A06709f5Dc62B)
+- **Network**: ICP (Bitnify Testnet)
+- **Contract**: [0xaC7e4Ad5d7557B78ebc84Dff668A06709f5Dc62B](https://explorer.testnet.bitfinity.network/address/0xaC7e4Ad5d7557B78ebc84Dff668A06709f5Dc62B)
 
 ## Structure
 
